@@ -25,6 +25,7 @@ class MultiplayerService {
 
     _socket?.dispose();
 
+    final completer = Completer<void>();
     final socket = io.io(
       ServerConfig.serverUrl,
       io.OptionBuilder()
@@ -38,6 +39,9 @@ class MultiplayerService {
     socket.onConnect((_) {
       isConnected.value = true;
       lastError.value = null;
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     });
 
     socket.onDisconnect((_) {
@@ -52,10 +56,20 @@ class MultiplayerService {
 
     socket.onConnectError((error) {
       lastError.value = 'تعذر الاتصال بالخادم';
+      if (!completer.isCompleted) {
+        completer.completeError(Exception('تعذر الاتصال بالخادم'));
+      }
       if (kDebugMode) {
         print('Socket connect error: $error');
       }
     });
+
+    await completer.future.timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        throw TimeoutException('انتهت مهلة الاتصال بالخادم');
+      },
+    );
   }
 
   Future<RoomState> createRoom({
@@ -102,10 +116,10 @@ class MultiplayerService {
     _handleActionResponse(response);
   }
 
-  Future<void> approveResults(List<String> approvedWords) async {
+  Future<void> approveResults(Map<String, List<String>> reviewsByPlayer) async {
     final socket = _requireSocket();
     final response = await _emitWithAck(socket, 'approve_results', {
-      'approvedWords': approvedWords,
+      'reviews': reviewsByPlayer,
     });
     _handleActionResponse(response);
   }

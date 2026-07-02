@@ -37,6 +37,33 @@ class RoomPlayer {
   }
 }
 
+class ReviewSubmission {
+  const ReviewSubmission({
+    required this.playerId,
+    required this.playerName,
+    required this.words,
+    required this.approvedWords,
+  });
+
+  final String playerId;
+  final String playerName;
+  final List<String> words;
+  final List<String> approvedWords;
+
+  factory ReviewSubmission.fromJson(Map<String, dynamic> json) {
+    return ReviewSubmission(
+      playerId: json['playerId'] as String,
+      playerName: json['playerName'] as String,
+      words: (json['words'] as List<dynamic>? ?? [])
+          .map((word) => word as String)
+          .toList(),
+      approvedWords: (json['approvedWords'] as List<dynamic>? ?? [])
+          .map((word) => word as String)
+          .toList(),
+    );
+  }
+}
+
 class RoundPlayerResult {
   const RoundPlayerResult({
     required this.playerId,
@@ -78,6 +105,7 @@ class RoomState {
     required this.roundEndsAt,
     required this.mySubmittedWords,
     required this.myApprovedWords,
+    required this.reviewSubmissions,
     required this.roundResults,
   });
 
@@ -92,6 +120,7 @@ class RoomState {
   final int? roundEndsAt;
   final List<String> mySubmittedWords;
   final List<String> myApprovedWords;
+  final List<ReviewSubmission> reviewSubmissions;
   final List<RoundPlayerResult> roundResults;
 
   factory RoomState.fromJson(Map<String, dynamic> json) {
@@ -124,6 +153,12 @@ class RoomState {
           .toList(),
       myApprovedWords: (json['myApprovedWords'] as List<dynamic>? ?? [])
           .map((word) => word as String)
+          .toList(),
+      reviewSubmissions: (json['reviewSubmissions'] as List<dynamic>? ?? [])
+          .map(
+            (entry) =>
+                ReviewSubmission.fromJson(entry as Map<String, dynamic>),
+          )
           .toList(),
       roundResults: (json['roundResults'] as List<dynamic>? ?? [])
           .map(

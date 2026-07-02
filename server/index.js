@@ -93,11 +93,23 @@ function serializeRoom(room, viewerSocketId) {
   const viewerPlayerId = socketToPlayer.get(viewerSocketId);
   const mySubmission = room.submissions[viewerPlayerId] || [];
   const myReview = room.reviews[viewerPlayerId] || mySubmission;
+  const isHostViewer = room.hostId === viewerPlayerId;
+
+  const reviewSubmissions =
+    room.phase === 'review' && isHostViewer
+      ? room.players.map((player) => ({
+          playerId: player.id,
+          playerName: player.name,
+          words: room.submissions[player.id] || [],
+          approvedWords:
+            room.reviews[player.id] ?? [...(room.submissions[player.id] || [])],
+        }))
+      : [];
 
   return {
     code: room.code,
     playerId: viewerPlayerId,
-    isHost: room.hostId === viewerPlayerId,
+    isHost: isHostViewer,
     settings: room.settings,
     phase: room.phase,
     roundIndex: room.roundIndex,
@@ -113,6 +125,7 @@ function serializeRoom(room, viewerSocketId) {
     roundEndsAt: room.roundEndsAt,
     mySubmittedWords: mySubmission,
     myApprovedWords: myReview,
+    reviewSubmissions,
     roundResults: room.phase === 'results' ? buildRoundResults(room) : [],
   };
 }
@@ -177,17 +190,13 @@ function maybeAdvanceFromPlaying(room) {
   emitRoomState(room);
 }
 
-function maybeAdvanceFromReview(room) {
-  const allReviewed = room.players.every((player) => player.hasReviewed);
-  if (!allReviewed) {
-    return;
-  }
-
+function finalizeReview(room) {
   for (const player of room.players) {
     const approvedWords = room.reviews[player.id] || [];
     const roundScore = approvedWords.length;
     player.points += roundScore;
     room.roundScores[player.id] = roundScore;
+    player.hasReviewed = true;
   }
 
   room.phase = 'results';
@@ -404,7 +413,7 @@ io.on('connection', (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on('approve_results', ({ approvedWords }, callback) => {
+  socket.on('approve_results', ({ reviews }, callback) => {
     const roomCode = socketToRoom.get(socket.id);
     const room = rooms.get(roomCode || '');
     if (!room || room.phase !== 'review') {
@@ -412,16 +421,29 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const player = room.players.find((entry) => entry.id === socket.id);
-    if (!player || player.hasReviewed) {
-      callback?.({ ok: false, error: 'تم الاعتماد مسبقاً' });
+    if (room.hostId !== socket.id) {
+      callback?.({
+        ok: false,
+        error: 'فقط مسؤول الغرفة يمكنه اعتماد الكلمات',
+      });
       return;
     }
 
-    room.reviews[socket.id] = approvedWords;
-    player.hasReviewed = true;
-    emitRoomState(room);
-    maybeAdvanceFromReview(room);
+    if (!reviews || typeof reviews !== 'object') {
+      callback?.({ ok: false, error: 'بيانات الاعتماد غير صالحة' });
+      return;
+    }
+
+    for (const player of room.players) {
+      const approvedWords = reviews[player.id];
+      if (!Array.isArray(approvedWords)) {
+        callback?.({ ok: false, error: 'بيانات الاعتماد غير مكتملة' });
+        return;
+      }
+      room.reviews[player.id] = approvedWords;
+    }
+
+    finalizeReview(room);
     callback?.({ ok: true });
   });
 

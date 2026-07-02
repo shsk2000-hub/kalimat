@@ -4,8 +4,13 @@ import 'join_link_utils.dart';
 
 abstract final class ServerConfig {
   static const int devApiPort = 3000;
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   static String get serverUrl {
+    if (apiBaseUrl.isNotEmpty) {
+      return apiBaseUrl;
+    }
+
     if (kIsWeb) {
       final uri = Uri.base;
       final host = uri.host.isEmpty ? 'localhost' : uri.host;

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kalimat-api
+    runtime: docker
+    rootDir: server
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "3000"

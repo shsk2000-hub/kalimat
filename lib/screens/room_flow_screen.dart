@@ -324,44 +324,56 @@ class _ReviewPhaseView extends StatefulWidget {
 }
 
 class _ReviewPhaseViewState extends State<_ReviewPhaseView> {
-  late Set<String> _approvedWords;
+  late Map<String, Set<String>> _approvedByPlayer;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _approvedWords = Set<String>.from(widget.state.mySubmittedWords);
+    _approvedByPlayer = _buildApprovedMap(widget.state);
   }
 
   @override
   void didUpdateWidget(covariant _ReviewPhaseView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.state.mySubmittedWords != widget.state.mySubmittedWords) {
-      _approvedWords = Set<String>.from(widget.state.mySubmittedWords);
+    if (oldWidget.state.reviewSubmissions != widget.state.reviewSubmissions) {
+      _approvedByPlayer = _buildApprovedMap(widget.state);
     }
   }
 
-  int get _approvedCount => _approvedWords.length;
-  int get _rejectedCount =>
-      widget.state.mySubmittedWords.length - _approvedCount;
-
-  String get _myName {
-    return widget.state.players
-        .firstWhere((player) => player.id == widget.state.playerId)
-        .name;
+  Map<String, Set<String>> _buildApprovedMap(RoomState state) {
+    return {
+      for (final submission in state.reviewSubmissions)
+        submission.playerId: Set<String>.from(submission.approvedWords),
+    };
   }
 
-  Future<void> _approve() async {
-    if (_isSubmitting) {
+  int _approvedCount(ReviewSubmission submission) {
+    return _approvedByPlayer[submission.playerId]?.length ?? 0;
+  }
+
+  int _rejectedCount(ReviewSubmission submission) {
+    return submission.words.length - _approvedCount(submission);
+  }
+
+  Future<void> _approveAll() async {
+    if (_isSubmitting || !widget.state.isHost) {
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
-      final approved = widget.state.mySubmittedWords
-          .where(_approvedWords.contains)
-          .toList();
-      await MultiplayerService.instance.approveResults(approved);
+      final reviews = {
+        for (final submission in widget.state.reviewSubmissions)
+          submission.playerId: submission.words
+              .where(
+                (word) =>
+                    _approvedByPlayer[submission.playerId]?.contains(word) ??
+                    false,
+              )
+              .toList(),
+      };
+      await MultiplayerService.instance.approveResults(reviews);
     } catch (error) {
       if (!mounted) {
         return;
@@ -375,41 +387,48 @@ class _ReviewPhaseViewState extends State<_ReviewPhaseView> {
 
   @override
   Widget build(BuildContext context) {
-    final me = widget.state.players
-        .firstWhere((player) => player.id == widget.state.playerId);
+    if (!widget.state.isHost) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('مراجعة الكلمات')),
+        body: const SafeArea(
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'بانتظار مسؤول الغرفة لاعتماد الكلمات...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final submissions = widget.state.reviewSubmissions;
+    final totalWords =
+        submissions.fold<int>(0, (total, entry) => total + entry.words.length);
+    final totalApproved = submissions.fold<int>(
+      0,
+      (total, entry) => total + _approvedCount(entry),
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('مراجعة الكلمات')),
+      appBar: AppBar(title: const Text('اعتماد الكلمات')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
             Text(
-              'الجولة ${widget.state.roundIndex + 1} - مراجعة قبل اعتماد النتائج',
+              'الجولة ${widget.state.roundIndex + 1} - اعتماد كلمات اللاعبين',
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: AppTheme.cardBorder),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'إجمالي الكلمات: ${widget.state.mySubmittedWords.length}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    Text('المعتمدة: $_approvedCount | المرفوضة: $_rejectedCount'),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 8),
+            const Text(
+              'أنت مسؤول الغرفة. أزل علامة الصح عن أي كلمة غير مقبولة ثم اعتمد النتائج.',
+              textAlign: TextAlign.right,
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 16),
             Card(
@@ -420,57 +439,81 @@ class _ReviewPhaseViewState extends State<_ReviewPhaseView> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('$_approvedCount معتمدة / $_rejectedCount مرفوضة'),
-                        Text(_myName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (widget.state.mySubmittedWords.isEmpty)
-                      const Text('لم تُرسل كلمات', textAlign: TextAlign.right)
-                    else
-                      ...widget.state.mySubmittedWords.map((word) {
-                        final isApproved = _approvedWords.contains(word);
-                        return CheckboxListTile(
-                          value: isApproved,
-                          onChanged: me.hasReviewed
-                              ? null
-                              : (value) {
-                                  setState(() {
-                                    if (value == true) {
-                                      _approvedWords.add(word);
-                                    } else {
-                                      _approvedWords.remove(word);
-                                    }
-                                  });
-                                },
-                          title: Text(word, textAlign: TextAlign.right),
-                          subtitle: Text(isApproved ? 'معتمدة' : 'مرفوضة'),
-                          controlAffinity: ListTileControlAffinity.leading,
-                        );
-                      }),
-                  ],
+                child: Text(
+                  'إجمالي الكلمات: $totalWords | المعتمدة: $totalApproved | المرفوضة: ${totalWords - totalApproved}',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            ...submissions.map((submission) {
+              final approvedWords =
+                  _approvedByPlayer[submission.playerId] ?? <String>{};
+
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppTheme.cardBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_approvedCount(submission)} معتمدة / ${_rejectedCount(submission)} مرفوضة',
+                            style: const TextStyle(color: AppTheme.textMuted),
+                          ),
+                          Text(
+                            submission.playerName,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (submission.words.isEmpty)
+                        const Text('لم تُرسل كلمات', textAlign: TextAlign.right)
+                      else
+                        ...submission.words.map((word) {
+                          final isApproved = approvedWords.contains(word);
+                          return CheckboxListTile(
+                            value: isApproved,
+                            onChanged: (value) {
+                              setState(() {
+                                final words =
+                                    _approvedByPlayer[submission.playerId] ??
+                                        <String>{};
+                                if (value == true) {
+                                  words.add(word);
+                                } else {
+                                  words.remove(word);
+                                }
+                                _approvedByPlayer[submission.playerId] = words;
+                              });
+                            },
+                            title: Text(word, textAlign: TextAlign.right),
+                            subtitle: Text(isApproved ? 'معتمدة' : 'مرفوضة'),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              );
+            }),
             const SizedBox(height: 24),
-            if (me.hasReviewed)
-              const Text(
-                'تم اعتماد نتائجك، بانتظار بقية اللاعبين...',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textMuted),
-              )
-            else
-              PrimaryPillButton(
-                label: 'اعتماد النتائج',
-                icon: Icons.verified_user_outlined,
-                enabled: !_isSubmitting,
-                onPressed: _approve,
-              ),
+            PrimaryPillButton(
+              label: 'اعتماد النتائج',
+              icon: Icons.verified_user_outlined,
+              enabled: !_isSubmitting,
+              onPressed: _approveAll,
+            ),
           ],
         ),
       ),
