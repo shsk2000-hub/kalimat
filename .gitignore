@@ -55,3 +55,8 @@ server/public/
 
 # OS / editor
 Thumbs.db
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
