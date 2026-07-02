@@ -8,6 +8,7 @@ import '../data/round_prompts.dart';
 import '../models/game_settings.dart';
 import '../models/room_state.dart';
 import '../utils/player_identity.dart';
+import 'firebase_bootstrap.dart';
 
 class MultiplayerService {
   MultiplayerService._();
@@ -18,7 +19,6 @@ class MultiplayerService {
   final ValueNotifier<bool> isConnected = ValueNotifier<bool>(false);
   final ValueNotifier<String?> lastError = ValueNotifier<String?>(null);
 
-  final FirebaseDatabase _database = FirebaseDatabase.instance;
   final Random _random = Random();
 
   StreamSubscription<DatabaseEvent>? _roomSubscription;
@@ -26,10 +26,11 @@ class MultiplayerService {
   String? _playerId;
   String? _roomCode;
 
-  DatabaseReference get _rooms => _database.ref('rooms');
-  DatabaseReference get _roomCodes => _database.ref('roomCodes');
+  DatabaseReference get _rooms => FirebaseDatabase.instance.ref('rooms');
+  DatabaseReference get _roomCodes => FirebaseDatabase.instance.ref('roomCodes');
 
   Future<void> connect() async {
+    await FirebaseBootstrap.ensureInitialized();
     _playerId = await PlayerIdentity.currentId();
     isConnected.value = true;
     lastError.value = null;

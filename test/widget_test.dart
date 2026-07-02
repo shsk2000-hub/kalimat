@@ -1,14 +1,8 @@
-import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kalimat/main.dart';
 
 void main() {
-  setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    setupFirebaseCoreMocks();
-  });
-
   testWidgets('App launches Arabic game setup screen', (WidgetTester tester) async {
     await tester.pumpWidget(const KalimatApp());
     await tester.pumpAndSettle();
