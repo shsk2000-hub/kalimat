@@ -44,9 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Node.js server
-server/node_modules/
-server/public/
+# Node.js server (removed — multiplayer uses Firebase)
 
 # Environment and secrets
 .env

@@ -1,0 +1,3 @@
+Y
+database.rules.json
+europe-west1

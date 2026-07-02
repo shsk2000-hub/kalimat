@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase_options.dart';
 import 'screens/game_setup_screen.dart';
 import 'screens/join_room_screen.dart';
 import 'utils/app_theme.dart';
 import 'utils/join_link_utils.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(KalimatApp(
     initialJoinCode: JoinLinkUtils.codeFromUri(Uri.base),
   ));

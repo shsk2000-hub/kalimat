@@ -1,44 +1,39 @@
 # kalimat
 
-Arabic multiplayer word challenge game built with Flutter Web.
+Arabic multiplayer word challenge game built with Flutter Web and Firebase.
+
+## Stack
+
+- **Firebase Hosting** — Flutter Web app
+- **Firebase Realtime Database** — rooms, players, and live game state
+- **Local player identity** — stored in browser/device (no signup)
+
+## One-time Firebase setup
+
+1. Open [Realtime Database in Firebase Console](https://console.firebase.google.com/project/kalimat-shsk2000/database)
+2. Click **Create Database** → choose a location → **Start in test mode**
+3. Deploy rules and app:
+
+```powershell
+firebase deploy --only database,hosting
+```
 
 ## Local development
 
-### Prerequisites
+```powershell
+flutter pub get
+flutter run -d chrome
+```
 
-- [Flutter](https://docs.flutter.dev/get-started/install) (stable)
-- [Node.js](https://nodejs.org/) 20+ (for local multiplayer server)
-- [Firebase CLI](https://firebase.google.com/docs/cli) (for hosting deployment)
-
-## Architecture
-
-- **Firebase Hosting** serves the Flutter Web app.
-- **Render** runs the Socket.IO multiplayer API (`server/`).
-
-Set the API URL when building for production:
+## Deploy updates
 
 ```powershell
-flutter build web --release --dart-define=API_BASE_URL=https://YOUR_API.onrender.com
+flutter build web --release
 firebase deploy --only hosting
 ```
 
-Or use:
+## Multiplayer rules
 
-```powershell
-.\scripts\deploy-production.ps1 -ApiBaseUrl https://YOUR_API.onrender.com
-```
-
-### Deploy the API on Render
-
-1. Push this repository to GitHub.
-2. In Render, create a **Blueprint** from the repo (uses `render.yaml`).
-3. Wait for `kalimat-api` to deploy and copy its URL.
-4. Run the production web deploy command above with that URL.
-
-### Local multiplayer
-
-```powershell
-.\scripts\serve-web.ps1
-```
-
-Open http://localhost:3000
+- Room creator is the host
+- Host starts rounds and approves all player words
+- Join via room code or QR/link (`?join=1234`)
