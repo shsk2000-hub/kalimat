@@ -1,5 +1,5 @@
 # Build Flutter web
-FROM ghcr.io/cirruslabs/flutter:stable AS flutter-build
+FROM ghcr.io/cirruslabs/flutter:3.44.4 AS flutter-build
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./
 COPY lib ./lib
