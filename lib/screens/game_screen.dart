@@ -1,111 +1,146 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../data/questions.dart';
-import '../models/question.dart';
-import '../widgets/answer_button.dart';
-import 'result_screen.dart';
+import '../data/round_prompts.dart';
+import '../models/game_settings.dart';
+import '../models/round_result.dart';
+import '../widgets/game_countdown_timer.dart';
+import '../widgets/round_indicator.dart';
+import '../widgets/submit_words_button.dart';
+import '../widgets/words_input_field.dart';
+import 'word_review_screen.dart';
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({
+    super.key,
+    required this.settings,
+    required this.roundIndex,
+    this.completedRounds = const [],
+  });
+
+  final GameSettings settings;
+  final int roundIndex;
+  final List<RoundResult> completedRounds;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> {
-  final List<Question> _questions = List<Question>.from(sampleQuestions);
-  int _currentIndex = 0;
-  int _score = 0;
-  int? _selectedIndex;
-  bool _answered = false;
+  final _wordsController = TextEditingController();
 
-  Question get _currentQuestion => _questions[_currentIndex];
+  late int _secondsRemaining;
+  late String _currentPrompt;
 
-  void _selectAnswer(int index) {
-    if (_answered) {
-      return;
-    }
+  Timer? _timer;
+  bool _isSubmitting = false;
 
-    setState(() {
-      _selectedIndex = index;
-      _answered = true;
-      if (index == _currentQuestion.correctIndex) {
-        _score++;
+  @override
+  void initState() {
+    super.initState();
+    _currentPrompt = roundPrompts[widget.roundIndex % roundPrompts.length];
+    _secondsRemaining = widget.settings.roundDurationSeconds;
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _wordsController.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        return;
       }
+
+      if (_secondsRemaining <= 1) {
+        _timer?.cancel();
+        setState(() => _secondsRemaining = 0);
+        _submitWords();
+        return;
+      }
+
+      setState(() => _secondsRemaining--);
     });
   }
 
-  void _goToNextQuestion() {
-    if (_currentIndex == _questions.length - 1) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => ResultScreen(
-            score: _score,
-            totalQuestions: _questions.length,
-          ),
-        ),
-      );
+  List<String> _parseWords(String raw) {
+    return raw
+        .split('\n')
+        .map((word) => word.trim())
+        .where((word) => word.isNotEmpty)
+        .toList();
+  }
+
+  void _submitWords() {
+    if (_isSubmitting) {
       return;
     }
 
-    setState(() {
-      _currentIndex++;
-      _selectedIndex = null;
-      _answered = false;
-    });
+    _isSubmitting = true;
+    _timer?.cancel();
+
+    final words = _parseWords(_wordsController.text);
+    final roundResult = RoundResult.fromSubmission(
+      prompt: _currentPrompt,
+      submittedWords: words,
+    );
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => WordReviewScreen(
+          settings: widget.settings,
+          roundIndex: widget.roundIndex,
+          roundResult: roundResult,
+          completedRounds: widget.completedRounds,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Question ${_currentIndex + 1} of ${_questions.length}'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LinearProgressIndicator(
-              value: (_currentIndex + 1) / _questions.length,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              _currentQuestion.prompt,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: ListView.separated(
-                itemCount: _currentQuestion.options.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  bool? isCorrect;
-                  if (_answered) {
-                    if (index == _currentQuestion.correctIndex) {
-                      isCorrect = true;
-                    } else if (index == _selectedIndex) {
-                      isCorrect = false;
-                    }
-                  }
+    final inputEnabled = _secondsRemaining > 0 && !_isSubmitting;
 
-                  return AnswerButton(
-                    label: _currentQuestion.options[index],
-                    isSelected: _selectedIndex == index,
-                    isCorrect: isCorrect,
-                    onPressed: () => _selectAnswer(index),
-                  );
-                },
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        title: const Text('الجولة بدأت'),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            children: [
+              RoundIndicator(currentRound: widget.roundIndex + 1),
+              const SizedBox(height: 24),
+              GameCountdownTimer(secondsRemaining: _secondsRemaining),
+              const SizedBox(height: 32),
+              Text(
+                _currentPrompt,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1F1F1F),
+                    ),
               ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _answered ? _goToNextQuestion : null,
-              child: Text(
-                _currentIndex == _questions.length - 1 ? 'See Results' : 'Next',
+              const SizedBox(height: 24),
+              Expanded(
+                child: WordsInputField(
+                  controller: _wordsController,
+                  enabled: inputEnabled,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              SubmitWordsButton(
+                enabled: inputEnabled,
+                onPressed: _submitWords,
+              ),
+            ],
+          ),
         ),
       ),
     );

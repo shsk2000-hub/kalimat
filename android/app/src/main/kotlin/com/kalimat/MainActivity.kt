@@ -1,4 +1,4 @@
-package com.wordchallengesolo.word_challenge_solo
+package com.kalimat
 
 import io.flutter.embedding.android.FlutterActivity
 

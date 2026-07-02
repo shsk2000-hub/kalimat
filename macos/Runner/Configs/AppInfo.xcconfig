@@ -1,14 +1,12 @@
 // Application-level settings for the Runner target.
 //
-// This may be replaced with something auto-generated from metadata (e.g., pubspec.yaml) in the
-// future. If not, the values below would default to using the project name when this becomes a
-// 'flutter create' template.
+// This may be replaced with custom settings when building a release build.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = word_challenge_solo
+PRODUCT_NAME = Kalimat
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.wordchallengesolo.wordChallengeSolo
+PRODUCT_BUNDLE_IDENTIFIER = com.kalimat
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.wordchallengesolo. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.kalimat. All rights reserved.

@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node.js server
+server/node_modules/
+server/public/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+Thumbs.db

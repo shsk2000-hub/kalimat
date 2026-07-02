@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.wordchallengesolo" "\0"
-            VALUE "FileDescription", "word_challenge_solo" "\0"
+            VALUE "CompanyName", "com.kalimat" "\0"
+            VALUE "FileDescription", "Kalimat" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "word_challenge_solo" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.wordchallengesolo. All rights reserved." "\0"
-            VALUE "OriginalFilename", "word_challenge_solo.exe" "\0"
-            VALUE "ProductName", "word_challenge_solo" "\0"
+            VALUE "InternalName", "kalimat" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.kalimat. All rights reserved." "\0"
+            VALUE "OriginalFilename", "kalimat.exe" "\0"
+            VALUE "ProductName", "Kalimat" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

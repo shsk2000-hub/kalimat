@@ -1,11 +1,11 @@
 {
-    "name": "word_challenge_solo",
-    "short_name": "word_challenge_solo",
+    "name": "Kalimat",
+    "short_name": "Kalimat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Kalimat word challenge application.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

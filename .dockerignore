@@ -1,0 +1,7 @@
+.git/
+.idea/
+.dart_tool/
+build/
+server/node_modules/
+server/public/
+**/*.log
